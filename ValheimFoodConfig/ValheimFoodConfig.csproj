@@ -68,18 +68,37 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ILMerge" Version="3.0.41" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="ValheimFoodConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ini-parser">
+      <Version>2.5.2</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ILRepack.MSBuild.Task" Version="2.0.1" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Target Name="ILMerge">
-    <!-- the ILMergePath property points to the location of ILMerge.exe console application -->
-    <Exec Command="$(ILMergeConsolePath) /out:ValheimFoodConfig.dll ValheimFoodConfig.dll INIFileParser.dll" />
-  </Target>
+	<Target Name="ILRepack" AfterTargets="Build">
+
+		<PropertyGroup>
+			<WorkingDirectory>$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)</WorkingDirectory>
+		</PropertyGroup>
+
+		<ItemGroup>
+			<InputAssemblies Include="INIFileParser.dll" />
+		</ItemGroup>
+
+		<ILRepack
+            OutputType="$(OutputType)"
+            MainAssembly="$(AssemblyName).dll"
+            OutputAssembly="$(AssemblyName).dll"
+            InputAssemblies="@(InputAssemblies)"
+            InternalizeExcludeAssemblies="@(InternalizeExcludeAssemblies)"
+            WorkingDirectory="$(WorkingDirectory)" />
+	</Target>
 </Project>

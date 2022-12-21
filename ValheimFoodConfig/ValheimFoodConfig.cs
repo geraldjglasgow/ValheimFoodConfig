@@ -107,6 +107,5 @@ namespace ValheimFoodConfig {
             parser.WriteFile(configPath, data);
             logger.LogInfo(String.Format("Finished creating {0}", FILE_NAME));
         }
-
     }
 }
