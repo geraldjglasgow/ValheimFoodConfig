@@ -1,127 +1,103 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using BepInEx;
-using IniParser;
 using BepInEx.Logging;
-using System.IO;
-using IniParser.Model;
 using Jotunn.Managers;
+using UnityEngine.SceneManagement;
+using HarmonyLib;
+using BepInEx.Configuration;
+using ServerSync;
+using System.Reflection;
 
 namespace ValheimFoodConfig {
     [BepInPlugin(pluginGUID, pluginName, pluginVersion)]
-    [BepInDependency("com.jotunn.jotunn", BepInDependency.DependencyFlags.HardDependency)]
-    
+    [BepInDependency(Jotunn.Main.ModGuid)]
+
     public class ValheimFoodConfig : BaseUnityPlugin {
         const string pluginGUID = "com.ValheimFoodConfig";
         const string pluginName = "ValheimFoodConfig";
-        const string pluginVersion = "1.1.0";
-        public static ManualLogSource logger;
-        public static string FILE_NAME = String.Format("{0}.cfg", pluginName);
-        public static string configPath = Path.GetDirectoryName(Paths.BepInExConfigPath) + Path.DirectorySeparatorChar + FILE_NAME;
-        public static string SECTION_FOOD = "Food";
-        public static string SECTION_CUSTOM_FOOD = "Custom Food";
-        public static string HEALTH_SUFFIX = ".Health";
-        public static string DURATION_SUFFIX = ".Duration";
-        public static string STAMINA_SUFFIX = ".Stamina";
-        public static string HEALTHREGEN_SUFFIX = ".HealthRegen";
-        public static string EITR_SUFFIX = ".Eitr";
-        public static List<string> FOOD_PREFAB_NAMES = new List<string>
-            { "Raspberry", "Blueberries", "Blueberries", "Cloudberry", "Honey", "Carrot", "Onion", "Mushroom", "MushroomYellow", "MushroomBlue", "MushroomJotunPuffs", "MushroomMagecap", "NeckTailGrilled", "CookedMeat", "FishCooked", "CookedWolfMeat",
-            "CookedDeerMeat", "SerpentMeatCooked", "CookedLoxMeat", "CookedBugMeat", "CookedChickenMeat", "CookedHareMeat", "WolfJerky", "BoarJerky", "WolfMeatSkewer", "Sausages", "MeatPlatter", "HoneyGlazedChicken", "MisthareSupreme", "MinceMeatSauce",
-            "SerpentStew", "DeerStew", "TurnipStew", "CarrotSoup", "BlackSoup", "OnionSoup", "SeekerAspic", "LoxPie", "MushroomOmelette", "FishWraps", "FishAndBread", "Salad", "BloodPudding", "YggdrasilPorridge", "Bread", "QueensJam",
-            "MagicallyStuffedShroom", "Eyescream", "ShocklateSmoothie", "CookedEgg" };
+        const string pluginVersion = "2.0.0";
+        public static readonly ManualLogSource LOG = BepInEx.Logging.Logger.CreateLogSource(pluginName);
+        ConfigSync configSyncs = new ConfigSync(pluginGUID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
+        static public Dictionary<string, List<ConfigEntry<float>>> configs = new Dictionary<string, List<ConfigEntry<float>>>();
+
         void Awake() {
-            logger = Logger;
-            PrefabManager.OnVanillaPrefabsAvailable += LoadConfig;
-            PrefabManager.OnVanillaPrefabsAvailable += UpdateVanillaPrefabValues;
-            ZoneManager.OnVanillaLocationsAvailable += UpdateCustomPrefabValues;
+            PrefabManager.OnVanillaPrefabsAvailable += readConfigs;
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Harmony harmony = new Harmony(pluginGUID);
+            harmony.PatchAll(assembly);
         }
 
-        private void LoadConfig() {
-            if (!File.Exists(configPath)) {
-                CreateConfigFile();
+        public void readConfigs() {
+            if (configs.Count == 0) {
+                LOG.LogMessage("started loading configs");
+                Dictionary<string, UnityEngine.Object> itemDrops = PrefabManager.Cache.GetPrefabs(typeof(ItemDrop));
+                foreach (KeyValuePair<string, UnityEngine.Object> entry in itemDrops) {
+                    ItemDrop item = ((ItemDrop)entry.Value);
+                    // must check m_foodStamina value since many objects have m_food values
+                    if (item.m_itemData.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_itemData.m_shared.m_foodStamina > 0) {
+                        List<ConfigEntry<float>> listConfig = new List<ConfigEntry<float>>();
+                        listConfig.Add(config($"{entry.Key}", "Health", item.m_itemData.m_shared.m_food, $"Sets health value of {entry.Key}."));
+                        listConfig.Add(config($"{entry.Key}", "Stamina", item.m_itemData.m_shared.m_foodStamina, $"Sets stamina value of {entry.Key}."));
+                        listConfig.Add(config($"{entry.Key}", "Duration", item.m_itemData.m_shared.m_foodBurnTime, $"Sets duration value of {entry.Key}."));
+                        listConfig.Add(config($"{entry.Key}", "HealthRegen", item.m_itemData.m_shared.m_foodRegen, $"Sets regen value of {entry.Key}."));
+                        listConfig.Add(config($"{entry.Key}", "Eitr", item.m_itemData.m_shared.m_foodEitr, $"Sets eitr value of {entry.Key}."));
+                        configs.Add(entry.Key, listConfig);
+                    }
+                    LOG.LogMessage($"{configs.Count}");
+                }
+
+                config("General", "Lock Configuration", true, new ConfigDescription("[Server Only] The configuration is locked and may not be changed by clients once it has been synced from the server. Only valid for server config, will have no effect on clients."));
+                LOG.LogMessage("finished loading configs");
             }
         }
 
-        private void UpdateVanillaPrefabValues() {
-            var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(configPath);
-            IEnumerator<KeyData> enumerator = data[SECTION_FOOD].GetEnumerator();
-            while (enumerator.MoveNext()) {
-                KeyData keyData = enumerator.Current;
-                try {
-                    string[] tokens = keyData.KeyName.Split('.');
-                    if (tokens[1].Equals("Health")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_food = float.Parse(keyData.Value);
+        private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description, bool synchronizedSetting = true) {
+            ConfigDescription extendedDescription =
+                new ConfigDescription(
+                    description.Description +
+                    (synchronizedSetting ? " [Synced with Server]" : " [Not Synced with Server]"),
+                    description.AcceptableValues, description.Tags);
+            ConfigEntry<T> configEntry = Config.Bind(group, name, value, extendedDescription);
+            SyncedConfigEntry<T> syncedConfigEntry = configSyncs.AddConfigEntry(configEntry);
+            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
+
+            return configEntry;
+        }
+
+        private ConfigEntry<T> config<T>(string group, string name, T value, string description,
+            bool synchronizedSetting = true) {
+            return config(group, name, value, new ConfigDescription(description), synchronizedSetting);
+        }
+
+        private static void updateFoodValues() {
+            foreach (KeyValuePair<string, List<ConfigEntry<float>>> entry in configs) {
+                ItemDrop item = PrefabManager.Cache.GetPrefab<ItemDrop>(entry.Key);
+                if (item != null) {
+                    foreach (ConfigEntry<float> configEntry in entry.Value) {
+                        if (configEntry.Definition.Key.Equals("Health")) {
+                            item.m_itemData.m_shared.m_food = configEntry.Value;
+                        } else if (configEntry.Definition.Key.Equals("Stamina")) {
+                            item.m_itemData.m_shared.m_foodStamina = configEntry.Value;
+                        } else if (configEntry.Definition.Key.Equals("Duration")) {
+                            item.m_itemData.m_shared.m_foodBurnTime = configEntry.Value;
+                        } else if (configEntry.Definition.Key.Equals("HealthRegen")) {
+                            item.m_itemData.m_shared.m_foodRegen = configEntry.Value;
+                        } else if (configEntry.Definition.Key.Equals("Eitr")) {
+                            item.m_itemData.m_shared.m_foodEitr = configEntry.Value;
+                        }
                     }
-                    if (tokens[1].Equals("Stamina")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodStamina = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("Duration")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodBurnTime = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("HealthRegen")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodRegen = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("Eitr")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodEitr = float.Parse(keyData.Value);
-                    }
-                } catch (Exception e) {
-                    logger.LogInfo($"Loading config for {keyData.KeyName} failed. {e.Message} {e.StackTrace}");
                 }
             }
-
-            logger.LogInfo("Finished updating vanilla prefabs");
         }
 
-        private void UpdateCustomPrefabValues() {
-            var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(configPath);
-            IEnumerator<KeyData> enumerator = data[SECTION_CUSTOM_FOOD].GetEnumerator();
-            while(enumerator.MoveNext()) {
-                KeyData keyData = enumerator.Current;
-                try {
-                    string[] tokens = keyData.KeyName.Split('.');
-                    if (tokens[1].Equals("Health")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_food = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("Stamina")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodStamina = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("Duration")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodBurnTime = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("HealthRegen")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodRegen = float.Parse(keyData.Value);
-                    }
-                    if (tokens[1].Equals("Eitr")) {
-                        PrefabManager.Cache.GetPrefab<ItemDrop>(tokens[0]).m_itemData.m_shared.m_foodEitr = float.Parse(keyData.Value);
-                    }
-                } catch (Exception e) {
-                    logger.LogInfo($"Loading config for {keyData.KeyName} failed. {e.Message} {e.StackTrace}");
+        [HarmonyPriority(Priority.First)]
+        [HarmonyPatch(typeof(Player), nameof(Player.Awake))]
+        public static class Patch_Player_Awake {
+            private static void Postfix() {
+                if (SceneManager.GetActiveScene().name.Equals("main")) {
+                    updateFoodValues();
                 }
             }
-
-            logger.LogInfo("Finished updating custom prefabs");
-        }
-
-        private void CreateConfigFile() {
-            var parser = new FileIniDataParser();
-
-            IniData data = new IniData();
-            data.Sections.AddSection(SECTION_FOOD);
-            data.Sections.AddSection(SECTION_CUSTOM_FOOD);
-            foreach (String foodPrefabName in FOOD_PREFAB_NAMES) {
-                var foodPrefab = PrefabManager.Cache.GetPrefab<ItemDrop>(foodPrefabName);
-                data[SECTION_FOOD][String.Format("{0}{1}", foodPrefabName, HEALTH_SUFFIX)] = foodPrefab.m_itemData.m_shared.m_food.ToString();
-                data[SECTION_FOOD][String.Format("{0}{1}", foodPrefabName, STAMINA_SUFFIX)] = foodPrefab.m_itemData.m_shared.m_foodStamina.ToString();
-                data[SECTION_FOOD][String.Format("{0}{1}", foodPrefabName, DURATION_SUFFIX)] = foodPrefab.m_itemData.m_shared.m_foodBurnTime.ToString();
-                data[SECTION_FOOD][String.Format("{0}{1}", foodPrefabName, HEALTHREGEN_SUFFIX)] = foodPrefab.m_itemData.m_shared.m_foodRegen.ToString();
-                data[SECTION_FOOD][String.Format("{0}{1}", foodPrefabName, EITR_SUFFIX)] = foodPrefab.m_itemData.m_shared.m_foodEitr.ToString();
-            }
-
-            parser.WriteFile(configPath, data);
-            logger.LogInfo(String.Format("Finished creating {0}", FILE_NAME));
         }
     }
 }
