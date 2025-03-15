@@ -3,7 +3,7 @@
     <Target Name="ILRepacker" AfterTargets="Build" Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' and '$(Configuration)|$(Platform)' != 'APIStub|AnyCPU' ">
         <ItemGroup>
 			<InputAssemblies Include="$(TargetPath)"/>
-            <InputAssemblies Include="C:\Program Files (x86)\Steam\steamapps\common\Valheim\BepInEx\plugins\ServerSync_publicized.dll"/>
+            <InputAssemblies Include="C:\Users\geral\Desktop\AssemblyPublicizer\ServerSync-publicized.dll"/>
         </ItemGroup>
         <ILRepack Parallel="true" DebugInfo="true" Internalize="true" InputAssemblies="@(InputAssemblies)" OutputFile="$(TargetPath)" TargetKind="SameAsPrimaryAssembly" LibraryPath="$(OutputPath)"/>
     </Target>
