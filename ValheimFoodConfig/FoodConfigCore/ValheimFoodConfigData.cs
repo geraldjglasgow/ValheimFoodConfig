@@ -11,6 +11,12 @@ namespace ValheimFoodConfig
         public static Dictionary<string, List<ConfigEntry<float>>> ConfigEntries { get; }
             = new Dictionary<string, List<ConfigEntry<float>>>();
         
+        private const string ModifiersGroup = "0_Modifiers";
+        public static ConfigEntry<float> HealthModifier { get; private set; }
+        public static ConfigEntry<float> StaminaModifier { get; private set; }
+        public static ConfigEntry<float> DurationModifier { get; private set; }
+        public static ConfigEntry<float> HealthRegenModifier { get; private set; }
+        public static ConfigEntry<float> EitrModifier { get; private set; } 
         public static ConfigEntry<bool> DisableFoodDegradation { get; private set; }
 
         private static ConfigFile _configFile;
@@ -73,14 +79,49 @@ namespace ValheimFoodConfig
 
         private static void LoadDisableFoodDegradationConfiguration()
         {
+            HealthModifier = CreateConfigEntry(
+                ModifiersGroup,
+                "Health Modifier",
+                1f,
+                "Percentage to modify health value of all foods. [Synced with Server]"
+            );
+            
+            StaminaModifier = CreateConfigEntry(
+                ModifiersGroup,
+                "Stamina Modifier",
+                1f,
+                "Percentage to modify stamina value of all foods. [Synced with Server]"
+            );
+            
+            DurationModifier = CreateConfigEntry(
+                ModifiersGroup,
+                "Duration Modifier",
+                1f,
+                "Percentage to modify duration of all foods. [Synced with Server]"
+            );
+            
+            HealthRegenModifier = CreateConfigEntry(
+                ModifiersGroup,
+                "Health Regen Modifier",
+                1f,
+                "Percentage to modify health regeneration of all foods. [Synced with Server]"
+            );
+            
+            EitrModifier = CreateConfigEntry(
+                ModifiersGroup,
+                "Eitr Modifier",
+                1f,
+                "Percentage to modify eitr value of all foods. [Synced with Server]"
+            );
+            
             DisableFoodDegradation = CreateConfigEntry(
-                "0_Modifiers",
+                ModifiersGroup,
                 "Disable Food Degradation",
                 false,
                 "Set to true to disable food degradation.");
         }
         
-        public static void LoadFoodConfigurations()
+        private static void LoadFoodConfigurations()
         {
             if (ConfigEntries.Count > 0) return;
 

@@ -33,25 +33,33 @@ namespace ValheimFoodConfig
 
                 foreach (ConfigEntry<float> configEntry in entry.Value)
                 {
+                    float baseValue = configEntry.Value;
+                    float newValue = baseValue;
+                    
                     if (configEntry.Definition.Key.Equals(Constants.Health))
                     {
-                        item.m_itemData.m_shared.m_food = configEntry.Value;
+                        newValue *= ValheimFoodConfigData.HealthModifier.Value;
+                        item.m_itemData.m_shared.m_food = newValue;
                     }
                     else if (configEntry.Definition.Key.Equals(Constants.Stamina))
                     {
-                        item.m_itemData.m_shared.m_foodStamina = configEntry.Value;
+                        newValue *= ValheimFoodConfigData.StaminaModifier.Value;
+                        item.m_itemData.m_shared.m_foodStamina = newValue;
                     }
                     else if (configEntry.Definition.Key.Equals(Constants.Duration))
                     {
-                        item.m_itemData.m_shared.m_foodBurnTime = configEntry.Value;
+                        newValue *= ValheimFoodConfigData.DurationModifier.Value;
+                        item.m_itemData.m_shared.m_foodBurnTime = newValue;
                     }
                     else if (configEntry.Definition.Key.Equals(Constants.HealthRegen))
                     {
-                        item.m_itemData.m_shared.m_foodRegen = configEntry.Value;
+                        newValue *= ValheimFoodConfigData.HealthRegenModifier.Value;
+                        item.m_itemData.m_shared.m_foodRegen = newValue;
                     }
                     else if (configEntry.Definition.Key.Equals(Constants.Eitr))
                     {
-                        item.m_itemData.m_shared.m_foodEitr = configEntry.Value;
+                        newValue *= ValheimFoodConfigData.EitrModifier.Value;
+                        item.m_itemData.m_shared.m_foodEitr = newValue;
                     }
                 }
             }
