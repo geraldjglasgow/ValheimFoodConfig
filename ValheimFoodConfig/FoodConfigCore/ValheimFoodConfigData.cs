@@ -10,6 +10,8 @@ namespace ValheimFoodConfig
     {
         public static Dictionary<string, List<ConfigEntry<float>>> ConfigEntries { get; }
             = new Dictionary<string, List<ConfigEntry<float>>>();
+        
+        public static ConfigEntry<bool> DisableFoodDegradation { get; private set; }
 
         private static ConfigFile _configFile;
         private static ConfigSync _configSync;
@@ -20,7 +22,7 @@ namespace ValheimFoodConfig
             _configSync = configSync;
         }
 
-        public static ConfigEntry<T> CreateConfigEntry<T>(
+        private static ConfigEntry<T> CreateConfigEntry<T>(
             string group,
             string name,
             T defaultValue,
@@ -64,6 +66,21 @@ namespace ValheimFoodConfig
         }
 
         public static void LoadConfigurations()
+        {
+            LoadFoodConfigurations();
+            LoadDisableFoodDegradationConfiguration();
+        }
+
+        private static void LoadDisableFoodDegradationConfiguration()
+        {
+            DisableFoodDegradation = CreateConfigEntry(
+                "0_Modifiers",
+                "Disable Food Degradation",
+                false,
+                "Set to true to disable food degradation.");
+        }
+        
+        public static void LoadFoodConfigurations()
         {
             if (ConfigEntries.Count > 0) return;
 

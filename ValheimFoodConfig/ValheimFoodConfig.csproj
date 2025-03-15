@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="ILRepack.targets" />
+    <Content Include="LICENSE.md" />
     <Content Include="readme.md" />
   </ItemGroup>
   <ItemGroup>
