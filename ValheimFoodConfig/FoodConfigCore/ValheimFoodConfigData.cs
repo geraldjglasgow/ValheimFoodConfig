@@ -11,6 +11,9 @@ namespace ValheimFoodConfig
         public static Dictionary<string, List<ConfigEntry<float>>> ConfigEntries { get; }
             = new Dictionary<string, List<ConfigEntry<float>>>();
         
+        public static readonly Dictionary<string, MeadEffectConfig> MeadConfigs
+            = new Dictionary<string, MeadEffectConfig>();
+        
         private const string ModifiersGroup = "0_Modifiers";
         public static ConfigEntry<float> HealthModifier { get; private set; }
         public static ConfigEntry<float> StaminaModifier { get; private set; }
@@ -75,48 +78,93 @@ namespace ValheimFoodConfig
         {
             LoadFoodConfigurations();
             LoadDisableFoodDegradationConfiguration();
+            LoadMeadConfiguration();
+        }
+
+        private static void LoadMeadConfiguration()
+        {
+            foreach (var meadName in Constants.MeadNames)
+            {
+                var itemDrop = PrefabManager.Cache.GetPrefab<ItemDrop>(meadName);
+                if (itemDrop == null) continue;
+                var effect = itemDrop.m_itemData.m_shared.m_consumeStatusEffect;
+                float duration = 600f;
+                float heathOverTime = 0f;
+                float staminaOverTime = 0f;
+                if (effect is SE_Stats stats)
+                {
+                    duration = stats.m_ttl;
+                    heathOverTime = stats.m_healthOverTime;
+                    staminaOverTime = stats.m_staminaOverTime;
+                }
+                string group = $"0Meads_{meadName}";
+                var configObj = new MeadEffectConfig
+                {
+                    Duration = CreateConfigEntry(
+                        group,
+                        "Duration",
+                        duration,
+                        $"How many seconds {meadName} effect lasts"
+                    ),
+
+                    HealthOverTime = CreateConfigEntry(
+                        group,
+                        "HealthOverTime",
+                        heathOverTime,
+                        $"How much total health is restored over time by {meadName}"
+                    ),
+                    StaminaOverTime = CreateConfigEntry(
+                        group,
+                        "StaminaOverTime",
+                        staminaOverTime,
+                        $"How much total stamina is restored over time by {meadName}"
+                    )
+                };
+
+                MeadConfigs[meadName] = configObj;
+            }
         }
 
         private static void LoadDisableFoodDegradationConfiguration()
         {
             HealthModifier = CreateConfigEntry(
                 ModifiersGroup,
-                "Health Modifier",
+                "Health_Modifier",
                 1f,
                 "Percentage to modify health value of all foods. [Synced with Server]"
             );
             
             StaminaModifier = CreateConfigEntry(
                 ModifiersGroup,
-                "Stamina Modifier",
+                "Stamina_Modifier",
                 1f,
                 "Percentage to modify stamina value of all foods. [Synced with Server]"
             );
             
             DurationModifier = CreateConfigEntry(
                 ModifiersGroup,
-                "Duration Modifier",
+                "Duration_Modifier",
                 1f,
                 "Percentage to modify duration of all foods. [Synced with Server]"
             );
             
             HealthRegenModifier = CreateConfigEntry(
                 ModifiersGroup,
-                "Health Regen Modifier",
+                "HealthRegen_Modifier",
                 1f,
                 "Percentage to modify health regeneration of all foods. [Synced with Server]"
             );
             
             EitrModifier = CreateConfigEntry(
                 ModifiersGroup,
-                "Eitr Modifier",
+                "Eitr_Modifier",
                 1f,
                 "Percentage to modify eitr value of all foods. [Synced with Server]"
             );
             
             DisableFoodDegradation = CreateConfigEntry(
                 ModifiersGroup,
-                "Disable Food Degradation",
+                "Disable_Food_Degradation",
                 false,
                 "Set to true to disable food degradation.");
         }

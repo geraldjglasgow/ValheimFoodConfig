@@ -32,6 +32,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="FoodConfigCore\MeadEffectConfig.cs" />
     <Compile Include="ValheimClasses\PlayerClass.cs" />
     <Compile Include="ValheimClasses\StatusEffectClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
