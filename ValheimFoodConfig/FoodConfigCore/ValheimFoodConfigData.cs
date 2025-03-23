@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BepInEx.Configuration;
 using Jotunn.Managers;
 using ServerSync;
+using Object = UnityEngine.Object;
 
 namespace ValheimFoodConfig
 {
@@ -10,16 +11,16 @@ namespace ValheimFoodConfig
     {
         public static Dictionary<string, List<ConfigEntry<float>>> ConfigEntries { get; }
             = new Dictionary<string, List<ConfigEntry<float>>>();
-        
+
         public static readonly Dictionary<string, MeadEffectConfig> MeadConfigs
             = new Dictionary<string, MeadEffectConfig>();
-        
+
         private const string ModifiersGroup = "0_Modifiers";
         public static ConfigEntry<float> HealthModifier { get; private set; }
         public static ConfigEntry<float> StaminaModifier { get; private set; }
         public static ConfigEntry<float> DurationModifier { get; private set; }
         public static ConfigEntry<float> HealthRegenModifier { get; private set; }
-        public static ConfigEntry<float> EitrModifier { get; private set; } 
+        public static ConfigEntry<float> EitrModifier { get; private set; }
         public static ConfigEntry<bool> DisableFoodDegradation { get; private set; }
 
         private static ConfigFile _configFile;
@@ -29,6 +30,18 @@ namespace ValheimFoodConfig
         {
             _configFile = configFile;
             _configSync = configSync;
+            HealthModifier = CreateConfigEntry(ModifiersGroup, "Health Modifier", 1f,
+                "Percentage to modify health value of all foods.");
+            StaminaModifier = CreateConfigEntry(ModifiersGroup, "Stamina Modifier", 1f,
+                "Percentage to modify stamina value of all foods.");
+            DurationModifier = CreateConfigEntry(ModifiersGroup, "Duration Modifier", 1f,
+                "Percentage to modify duration of all foods.");
+            HealthRegenModifier = CreateConfigEntry(ModifiersGroup, "Health Regen Modifier", 1f,
+                "Percentage to modify health regeneration of all foods.");
+            EitrModifier = CreateConfigEntry(ModifiersGroup, "Eitr Modifier", 1f,
+                "Percentage to modify eitr value of all foods.");
+            DisableFoodDegradation = CreateConfigEntry(ModifiersGroup, "Disable Food Degradation", false,
+                "Set to true to disable food degradation.");
         }
 
         private static ConfigEntry<T> CreateConfigEntry<T>(
@@ -77,7 +90,6 @@ namespace ValheimFoodConfig
         public static void LoadConfigurations()
         {
             LoadFoodConfigurations();
-            LoadDisableFoodDegradationConfiguration();
             LoadMeadConfiguration();
         }
 
@@ -97,6 +109,7 @@ namespace ValheimFoodConfig
                     heathOverTime = stats.m_healthOverTime;
                     staminaOverTime = stats.m_staminaOverTime;
                 }
+
                 string group = $"0Meads_{meadName}";
                 var configObj = new MeadEffectConfig
                 {
@@ -125,56 +138,12 @@ namespace ValheimFoodConfig
             }
         }
 
-        private static void LoadDisableFoodDegradationConfiguration()
-        {
-            HealthModifier = CreateConfigEntry(
-                ModifiersGroup,
-                "Health_Modifier",
-                1f,
-                "Percentage to modify health value of all foods. [Synced with Server]"
-            );
-            
-            StaminaModifier = CreateConfigEntry(
-                ModifiersGroup,
-                "Stamina_Modifier",
-                1f,
-                "Percentage to modify stamina value of all foods. [Synced with Server]"
-            );
-            
-            DurationModifier = CreateConfigEntry(
-                ModifiersGroup,
-                "Duration_Modifier",
-                1f,
-                "Percentage to modify duration of all foods. [Synced with Server]"
-            );
-            
-            HealthRegenModifier = CreateConfigEntry(
-                ModifiersGroup,
-                "HealthRegen_Modifier",
-                1f,
-                "Percentage to modify health regeneration of all foods. [Synced with Server]"
-            );
-            
-            EitrModifier = CreateConfigEntry(
-                ModifiersGroup,
-                "Eitr_Modifier",
-                1f,
-                "Percentage to modify eitr value of all foods. [Synced with Server]"
-            );
-            
-            DisableFoodDegradation = CreateConfigEntry(
-                ModifiersGroup,
-                "Disable_Food_Degradation",
-                false,
-                "Set to true to disable food degradation.");
-        }
-        
         private static void LoadFoodConfigurations()
         {
             if (ConfigEntries.Count > 0) return;
 
             ValheimFoodConfig.LOG.LogMessage("Loading configs...");
-            Dictionary<string, UnityEngine.Object> itemDrops = PrefabManager.Cache.GetPrefabs(typeof(ItemDrop));
+            Dictionary<string, Object> itemDrops = PrefabManager.Cache.GetPrefabs(typeof(ItemDrop));
 
             foreach (var entry in itemDrops)
             {

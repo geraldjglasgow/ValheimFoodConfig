@@ -33,8 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="FoodConfigCore\MeadEffectConfig.cs" />
-    <Compile Include="ValheimClasses\PlayerClass.cs" />
-    <Compile Include="ValheimClasses\StatusEffectClass.cs" />
+    <Compile Include="ValheimClasses\Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FoodConfigCore\Constants.cs" />
     <Compile Include="FoodConfigCore\ValheimFoodConfig.cs" />

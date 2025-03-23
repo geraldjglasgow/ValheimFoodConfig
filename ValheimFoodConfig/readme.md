@@ -45,3 +45,7 @@ unity explorer hit f7 in game to inspect unity objects
 
 if using vortex and bepinx preloader is failing, then 
 download bepinex without vortex and drag and drop doorstop_config, start_game, start_server, and winhttp into valheim base folder
+
+To package mod for the thunderstore
+have your mod folder with dll, icon, manifest, readme all in a single location
+highlight all of them and compress to .ZIP file

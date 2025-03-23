@@ -14,7 +14,7 @@ namespace ValheimFoodConfig
     {
         private const string PluginGuid = "com.ValheimFoodConfig";
         private const string PluginName = "ValheimFoodConfig";
-        private const string PluginVersion = "2.1.2";
+        private const string PluginVersion = "2.3.1";
         public static readonly ManualLogSource LOG = BepInEx.Logging.Logger.CreateLogSource(PluginName);
 
         private ConfigSync _configSync = new ConfigSync(PluginGuid)
